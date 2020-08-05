@@ -1,0 +1,766 @@
+       CBL LIST,MAP,RENT,XOPTS(SP),SSRANGE
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. CICSSRC.
+      ******************************************************************
+      ******************************************************************
+      ** PROGRAM:              WRITTEN:            TRANS:
+      **----------------------------------------------------------------
+      **   FUNCTION:
+      **   THIS IS A DRIVER PROGRAM WRITTEN BY VIJAY FOR CALLING
+      **   RLOGPO11... .
+      **
+      ******************************************************************
+
+       ENVIRONMENT DIVISION.
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+      ******************************************************************
+      **
+      ******************************************************************
+      ******************************************************************
+      ******************************************************************
+      **  COMMUNICATION MODULE DEFINITIONS
+      **
+
+       01  WS-COMMAREA.
+           COPY COMMIN1.
+       01  TIMESTAMP-VARIABLES.
+           05  WS-TIMESTAMP               PIC X(26) VALUE SPACES.
+           05  START-TS                   PIC X(26) VALUE SPACES.
+           05  START-TS-SHORT             PIC X(20) VALUE SPACES.
+           05  END-TS                     PIC X(26) VALUE SPACES.
+           05  END-TS-SHORT               PIC X(20) VALUE SPACES.
+
+
+      ******************************************************************
+      ** COMMUNICATION AREA FOR LINKS
+      ******************************************************************
+      *****************************************************************
+      *
+      *    W O R K I N G    S T O R A G E     S E C T I O N
+      *
+      *****************************************************************
+       01  VARIABLES.
+           02 WS-RESP                 PIC S9(08).
+           02 WS-ERR-CODE            PIC  -ZZZZZZZZZ.
+           02 WS-ERR-CODE2           PIC  -ZZZZZZZZZ.
+           02 S              PIC S9(04) COMP VALUE 0.
+           02 PGM-ID              PIC X(8) VALUE 'CICSSRC '.
+           02 RESP2               PIC S9(8) COMP.
+           02 SUB                 PIC S9(8) COMP.
+           02  WS-MESSAGE                PIC X(80)  VALUE SPACES.
+           COPY COMMCPX.
+
+
+      ************************************************************
+      *    L I N K A G E    S E C T I O N
+      ************************************************************
+      *    DFHCOMMAREA DEFINITIONS
+      ************************************************************
+       LINKAGE SECTION.
+       01  DFHCOMMAREA.
+           COPY COMMCPZ.
+
+
+
+
+
+      ******************************************************************
+      ** THIS IS THE START OF THE PROCEDURE DIVISION.
+      ******************************************************************
+       PROCEDURE DIVISION.
+      *----------------------------------------------------------------
+           EXEC CICS IGNORE CONDITION
+               NOSPACE
+           END-EXEC
+
+      ****************************************************
+      ********  ASSIGN USER ID TO TRANSACTION  ***********
+           INITIALIZE WS-MESSAGE
+           MOVE 'VIJAY CICSSRC INITIATED AT:' TO
+               WS-MESSAGE
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+
+
+      *    PERFORM  50-READ-INPUT-DATA
+           PERFORM  100-VALIDATE-INPUT-DATA
+           PERFORM  150-PEPARE-COMMAREA
+           PERFORM  200-CALL-RLOGPO11
+           INITIALIZE  WS-MESSAGE
+           MOVE 'VIJAY CALL CAME BACK FROM PGM AT:' TO
+               WS-MESSAGE
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           PERFORM  250-MOVE-OUTPUT
+
+
+           PERFORM END-OF-PROGRAM.
+
+      ******************************************************************
+      *  50-READ-INPUT-DATA.
+      *****************************************************************
+      *50-READ-INPUT-DATA.
+      *    INITIALIZE WS-MESSAGE
+      *    MOVE 'VIJAY INSIDE 50-READ-INPUT' TO
+      *        WS-MESSAGE
+      *    EXEC CICS WRITEQ TD  QUEUE('LOGP')
+      *              FROM (WS-MESSAGE)
+      *              NOHANDLE
+      *    END-EXEC
+      *    .
+      *---------------------------------------------------------------*
+      * Get the input data from the supplied container                *
+      *---------------------------------------------------------------*
+      *
+      *    EXEC CICS GET CONTAINER('DFHWS-DATA')
+      *              INTO(VW-IA)
+      *              RESP(WS-RESP)
+      *              RESP2(RESP2)
+      *    END-EXEC
+      *
+      *    IF WS-RESP NOT EQUAL DFHRESP(NORMAL)
+      *
+      *        Set up the Error message for the response
+      *        MOVE WS-RESP TO WS-ERR-CODE
+      *        MOVE RESP2   TO WS-ERR-CODE2
+      *        STRING 'GET CONTAINER FAILED WITH RESP' WS-ERR-CODE
+      *         'RESP2: ' WS-ERR-CODE2
+      *        DELIMITED BY SIZE INTO WS-MESSAGE
+      *        EXEC CICS WRITEQ TD  QUEUE('LOGP')
+      *                 FROM (WS-MESSAGE)
+      *                 NOHANDLE
+      *        END-EXEC
+      *
+      *        Return to the web service layer to send the response
+      *        EXEC CICS RETURN END-EXEC
+      *    END-IF
+      *    ...
+      *
+      ******************************************************************
+      *  100-VALIDATE-INPUT-DATA.
+      *****************************************************************
+       100-VALIDATE-INPUT-DATA.
+              INITIALIZE WS-MESSAGE
+              MOVE 'VIJAY INSIDE 100-VALIDATE' TO
+                  WS-MESSAGE
+              EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                       FROM (WS-MESSAGE)
+                       NOHANDLE
+              END-EXEC
+              MOVE VW-IA                  TO LW-IA
+
+              INITIALIZE WS-MESSAGE
+              STRING 'LCTRCD-0070:' LCTRCD-0070 DELIMITED BY SIZE
+              INTO WS-MESSAGE
+              EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                      FROM (WS-MESSAGE)
+                      NOHANDLE
+              END-EXEC
+              INITIALIZE WS-MESSAGE
+              STRING 'LBUSECD-0071:' LBUSECD-0071 DELIMITED BY SIZE
+              INTO WS-MESSAGE
+              EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                      FROM (WS-MESSAGE)
+                      NOHANDLE
+              END-EXEC
+              INITIALIZE WS-MESSAGE
+              STRING 'LREFERENCE-0072:' LREFERENCE-0072 DELIMITED
+              BY SIZE INTO WS-MESSAGE
+              EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                      FROM (WS-MESSAGE)
+                      NOHANDLE
+              END-EXEC
+              .
+
+      *****************************************************************
+      * INITIALIZE THE COMMAREA  FOR LINK PROCESS
+      *****************************************************************
+       150-PEPARE-COMMAREA.
+           INITIALIZE WS-MESSAGE
+           MOVE 'VIJAY INSIDE PARA 150-PREP:' TO
+               WS-MESSAGE
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+
+           INITIALIZE IEF-RUNTIME-PARM1
+                      IEF-RUNTIME-PARM2
+                      GLOBDATA
+                      W-IA
+                      W-OA
+
+           MOVE LCTRCD-0070            TO  CTRCD-0076
+           MOVE LREFERENCE-0072         TO  REFERENCE-0080
+           MOVE LBUSECD-0071            TO  BUSECD-0078
+           MOVE 'ENTER' TO PSMGR-IEF-COMMAND
+           .
+      *
+      * ***************************************************************
+      * LINK TO ROUTINES TO RETRIEVE REQUESTED INFORMATION
+      *****************************************************************
+      *****************************************************************
+       200-CALL-RLOGPO11.
+      *
+           INITIALIZE WS-MESSAGE
+           MOVE 'VIJAY INSIDE PARA 200-CALL:'
+               TO WS-MESSAGE
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+      *
+           CALL 'RLOGPO11' USING IEF-RUNTIME-PARM1
+                     IEF-RUNTIME-PARM2
+                     GLOBDATA
+                     W-IA
+                     W-OA
+
+      *    IF LOG-IT
+           IF STATUS-FLAG OF GLOBDATA NOT = SPACES OR
+               ERROR-ENCOUNTERED-SW OF GLOBDATA NOT = SPACES OR
+               VIEW-OVERFLOW-SW OF GLOBDATA NOT = SPACES
+             STRING 'VIJAY CALL FAILED.RESP CODE:'ERROR-ENCOUNTERED-SW
+                 DELIMITED BY SIZE INTO WS-MESSAGE
+             EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                       FROM (WS-MESSAGE)
+                       NOHANDLE
+             END-EXEC
+      *
+           END-IF
+           .
+
+      *----------------------------------------------------------------
+       250-MOVE-OUTPUT.
+           INITIALIZE WS-MESSAGE
+                      V-OA
+           MOVE 'VIJAY INSIDE PARA 250-MOVE:'
+               TO                     WS-MESSAGE
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+      *
+
+           INITIALIZE WS-MESSAGE
+           MOVE SEQUENCE-NUMBER-0131XX(1) TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+
+           INITIALIZE WS-MESSAGE
+           MOVE EXPECTED-START-DATE-0131(1)  TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+
+           INITIALIZE WS-MESSAGE
+           MOVE EXPECTED-END-DATE-0131(1)  TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+
+           INITIALIZE WS-MESSAGE
+           MOVE STATUS-0131(1)               TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+
+           INITIALIZE WS-MESSAGE
+           MOVE CTRCD-0132(1)               TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+
+           INITIALIZE WS-MESSAGE
+           MOVE CITYCD-0133(1)              TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+
+           INITIALIZE WS-MESSAGE
+           MOVE SITECD-0134(1)              TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+
+           INITIALIZE WS-MESSAGE
+           MOVE CTRCD-0135 (1)              TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+
+           INITIALIZE WS-MESSAGE
+           MOVE CITYCD-0136(1)              TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+
+           INITIALIZE WS-MESSAGE
+           MOVE SITECD-0137(1)              TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+
+           INITIALIZE WS-MESSAGE
+           MOVE REFERENCE-0138(1)           TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+
+           INITIALIZE WS-MESSAGE
+           MOVE REFERENCE-0139(1)           TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+
+           INITIALIZE WS-MESSAGE
+           MOVE UNIT-0140(1)           TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+
+           INITIALIZE WS-MESSAGE
+           MOVE SHORT-VALUE-0141(1)    TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+
+           INITIALIZE WS-MESSAGE
+           MOVE SHORT-VALUE-0142(1)    TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+
+           INITIALIZE WS-MESSAGE
+           MOVE SHORT-VALUE-0143(1)    TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+
+           INITIALIZE WS-MESSAGE
+           MOVE SHORT-VALUE-0144(1)    TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+
+           INITIALIZE WS-MESSAGE
+           MOVE  BUSESHOR-0121         TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+
+
+
+           MOVE   REFERENCE-0102          TO VREFERENCE-0102
+           INITIALIZE WS-MESSAGE
+           MOVE  REFERENCE-0102        TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   REFERENCE-0103          TO VREFERENCE-0103
+           INITIALIZE WS-MESSAGE
+           MOVE  REFERENCE-0103        TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   REFERENCE-0104          TO VREFERENCE-0104
+           INITIALIZE WS-MESSAGE
+           MOVE  REFERENCE-0104        TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   REFERENCE-0105          TO VREFERENCE-0105
+           INITIALIZE WS-MESSAGE
+           MOVE  REFERENCE-0105        TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   ALIAS-0106              TO VALIAS-0106
+           INITIALIZE WS-MESSAGE
+           MOVE  VALIAS-0106           TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   SHORT-VALUE-0107        TO VSHORT-VALUE-0107
+           INITIALIZE WS-MESSAGE
+           MOVE  VSHORT-VALUE-0107     TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   SHORT-VALUE-0108        TO VSHORT-VALUE-0108
+           INITIALIZE WS-MESSAGE
+           MOVE  VSHORT-VALUE-0108     TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   ALIAS-0109              TO VALIAS-0109
+           MOVE  VALIAS-0109           TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   SHORT-VALUE-0110        TO VSHORT-VALUE-0110
+           MOVE  VSHORT-VALUE-0110     TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   SHORT-VALUE-0111        TO VSHORT-VALUE-0111
+           MOVE  VSHORT-VALUE-0111     TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   ALIAS-0112              TO VALIAS-0112
+           MOVE  VALIAS-0112           TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   SHORT-VALUE-0113        TO VSHORT-VALUE-0113
+           MOVE  VSHORT-VALUE-0113     TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   SHORT-VALUE-0114        TO VSHORT-VALUE-0114
+           MOVE  VSHORT-VALUE-0114     TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   ALIAS-0115              TO VALIAS-0115
+           MOVE  VALIAS-0115           TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   SHORT-VALUE-0116        TO VSHORT-VALUE-0116
+           MOVE  VSHORT-VALUE-0116     TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   SHORT-VALUE-0117        TO VSHORT-VALUE-0117
+           MOVE  VSHORT-VALUE-0117     TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   SEQUENCE-NUMBER-0118    TO VEQUENCE-NUMBER-0118XX
+           MOVE  VEQUENCE-NUMBER-0118XX TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   VERSION-0118            TO VVERSION-0118XX
+           MOVE  VVERSION-0118XX       TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   CTRCD-0119              TO VCTRCD-0119
+           MOVE  VCTRCD-0119           TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   CTRCD-0120              TO VCTRCD-0120
+           MOVE  VCTRCD-0120           TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   BUSECD-0121             TO VBUSECD-0121
+           MOVE  VBUSECD-0121          TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   BUSESHOR-0121           TO VBUSESHOR-0121
+           MOVE  VBUSESHOR-0121        TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   BUSECD-0122             TO VBUSECD-0122
+           MOVE  VBUSECD-0122          TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   BUSESHOR-0122           TO VBUSESHOR-0122
+           MOVE  VBUSESHOR-0122        TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   REFERENCE-0123          TO VREFERENCE-0123
+           MOVE  VREFERENCE-0123       TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   REFERENCE-0124          TO VREFERENCE-0124
+           MOVE  VREFERENCE-0124       TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   REFERENCE-0125          TO VREFERENCE-0125
+           MOVE  VREFERENCE-0125       TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   REFERENCE-0126          TO VREFERENCE-0126
+           MOVE  VREFERENCE-0126       TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   ORDER-DATE-0127         TO VORDER-DATE-0127XX
+           MOVE  VORDER-DATE-0127XX    TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   REMARK-0127             TO VREMARK-0127
+           MOVE  VREMARK-0127          TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   CODE-0127               TO VCODE-0127
+           MOVE  VCODE-0127            TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   SCREEN-COMMAND-0128     TO VCREEN-COMMAND-0128
+           MOVE  VCREEN-COMMAND-0128   TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   ACTION-COMMAND-0128     TO VCTION-COMMAND-0128
+           MOVE  VCTION-COMMAND-0128   TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   WARNING-COMMAND-0128    TO VARNING-COMMAND-0128
+           MOVE  VARNING-COMMAND-0128   TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   RETURN-COMMAND-0128     TO VETURN-COMMAND-0128
+           MOVE  VETURN-COMMAND-0128   TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           MOVE   LINK-COMMAND-0128       TO VINK-COMMAND-0128
+           MOVE  VINK-COMMAND-0128     TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           PERFORM VARYING S FROM 1 BY 1 UNTIL S > EXP-LST-VIEW-0003MA
+            MOVE   EXP-LST-VIEW-0003AC(S)     TO
+                   VEXP-LST-VIEW-0003AC (S)
+            MOVE LIST-SELECTION-0129      (S)     TO
+                 VLIST-SELECTION-0129     (S)
+            MOVE CANCELLATION-FLAG-0130   (S)      TO
+                 VCANCELLATION-FLAG-0130  (S)
+            MOVE SEQUENCE-NUMBER-0131     (S)      TO
+                 VSEQUENCE-NUMBER-0131X   (S)
+            MOVE QUANTITY-0131            (S)      TO
+                 VQUANTITY-0131X          (S)
+            MOVE EXPECTED-START-DATE-0131  (S)      TO
+                 VEXPECTED-START-DATE-013X (S)
+            MOVE EXPECTED-END-DATE-0131   (S)      TO
+                 VEXPECTED-END-DATE-013X  (S)
+            MOVE VERSION-0131             (S)      TO
+                 VVERSION-0131X           (S)
+            MOVE STATUS-0131              (S)      TO
+                 VSTATUS-0131             (S)
+            MOVE CTRCD-0132               (S)      TO
+                 VCTRCD-0132              (S)
+            MOVE CITYCD-0133              (S)      TO
+                 VCITYCD-0133             (S)
+            MOVE SITECD-0134              (S)      TO
+                 VSITECD-0134             (S)
+            MOVE CTRCD-0135               (S)      TO
+                 VCTRCD-0135              (S)
+            MOVE CITYCD-0136              (S)      TO
+                 VCITYCD-0136             (S)
+            MOVE SITECD-0137              (S)      TO
+                 VSITECD-0137             (S)
+            MOVE REFERENCE-0138           (S)      TO
+                 VREFERENCE-0138          (S)
+            MOVE REFERENCE-0139           (S)      TO
+                 VREFERENCE-0139          (S)
+            MOVE UNIT-0140                (S)      TO
+                 VUNIT-0140               (S)
+            MOVE SHORT-VALUE-0141         (S)      TO
+                 VSHORT-VALUE-0141        (S)
+            MOVE SHORT-VALUE-0142         (S)      TO
+                 VSHORT-VALUE-0142        (S)
+            MOVE SHORT-VALUE-0143         (S)      TO
+                 VSHORT-VALUE-0143        (S)
+            MOVE SHORT-VALUE-0144         (S)      TO
+                 VSHORT-VALUE-0144        (S)
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (VEXP-LST-VIEW-0003 (S))
+                     NOHANDLE
+           END-EXEC
+           END-PERFORM
+            MOVE TEXT-0145                         TO
+                 VTEXT-0145
+           MOVE  VTEXT-0145            TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+            MOVE CTRCD-0146                        TO
+                 VCTRCD-0146
+           MOVE  VCTRCD-0146           TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+            MOVE BUSECD-0147                       TO
+                 VBUSECD-0147
+           MOVE  VBUSECD-0147          TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+            MOVE BUSESHOR-0147                     TO
+                 VBUSESHOR-0147
+           MOVE  VBUSESHOR-0147        TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+            MOVE PO-NUMBER-0148                    TO
+                 VPO-NUMBER-0148
+           MOVE  VPO-NUMBER-0148       TO WS-MESSAGE
+
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+
+      *    EXEC CICS PUT CONTAINER('DFHWS-DATA')
+      *                  FROM(VW-OA)
+      *    END-EXEC
+
+           .
+
+
+      ******************************************************************
+      *                      END OF PROGRAM
+      ******************************************************************
+       END-OF-PROGRAM.
+           INITIALIZE WS-MESSAGE
+           MOVE 'END-OF-PROGRAM            :' TO
+               WS-MESSAGE
+           EXEC CICS WRITEQ TD  QUEUE('LOGP')
+                     FROM (WS-MESSAGE)
+                     NOHANDLE
+           END-EXEC
+           EXEC CICS RETURN END-EXEC.
+      *
+
